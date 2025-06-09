@@ -1,0 +1,22 @@
+{
+    "KPlugin": {
+        "Id": "com.github.i1mercep.kryptotrack",
+        "Name": "kryptotrack",
+        "Description": "Displays the price of any cryptocurrency",
+        "Icon": "contents/images/kryptotrack.svg",
+        "Category": "Online Services",
+        "Authors": [
+            {
+                "Name": "Ivan Mercep",
+                "Email": "i1mercep@gmail.com"
+            }
+        ],
+        "EnabledByDefault": true,
+        "License": "GPL-2.0+",
+        "Version": "v1.0.0",
+        "Website": "https://github.com/i1mercep/kryptotrack"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-KDE-PluginInfo-Configurable": true
+}
