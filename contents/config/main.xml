@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd" >
+    <kcfgfile name=""/>
+    <group name="General">
+        <entry name="coin" type="String">
+            <label>Cryptocurrency ID (e.g., bitcoin, ethereum, solana)</label>
+            <default>bitcoin</default>
+        </entry>
+        <entry name="coinSymbol" type="String">
+            <label>Cryptocurrency symbol (for display)</label>
+            <default>btc</default>
+        </entry>
+        <entry name="baseCurrency" type="String">
+            <label>Base currency (e.g., usd, eur, btc)</label>
+            <default>usd</default>
+        </entry>
+        <entry name="refreshInterval" type="Int">
+            <label>Refresh interval in seconds</label>
+            <default>60</default>
+        </entry>
+    </group>
+    <group name="API">
+        <entry name="apiProvider" type="String">
+            <label>API provider</label>
+            <default>coingecko</default>
+        </entry>
+        <entry name="apiKey" type="String">
+            <label>API Key</label>
+            <default></default>
+        </entry>
+        <entry name="timeout" type="Int">
+            <label>Timeout in seconds</label>
+            <default>10</default>
+        </entry>
+    </group>
+    <group name="Appearance">
+        <entry name="fontSize" type="Int">
+            <label>Font size</label>
+            <default>9</default>
+        </entry>
+        <entry name="displayBaseCurrency" type="Bool">
+            <label>Display base currency</label>
+            <default>false</default>
+        </entry>
+        <entry name="boldText" type="Bool">
+            <label>Display bold text</label>
+            <default>false</default>
+        </entry>
+        <entry name="italicText" type="Bool">
+            <label>Display italic text</label>
+            <default>false</default>
+        </entry>
+    </group>
+</kcfg>

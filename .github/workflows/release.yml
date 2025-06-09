@@ -1,0 +1,117 @@
+name: "Release"
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    name: "Bump"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    outputs:
+      new_version: ${{ steps.tag_version.outputs.new_version }}
+      new_tag: ${{ steps.tag_version.outputs.new_tag }}
+      changelog: ${{ steps.tag_version.outputs.changelog }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: patch
+
+      - name: Debug bump outputs
+        run: |
+          echo "new_version: ${{ steps.tag_version.outputs.new_version }}"
+          echo "new_tag: ${{ steps.tag_version.outputs.new_tag }}"
+          echo "changelog: ${{ steps.tag_version.outputs.changelog }}"
+
+  release:
+    name: "Release"
+    needs: bump
+    if: (github.event_name == 'push' && needs.bump.outputs.new_tag != null) || github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
+
+      - name: Set env
+        run: |
+          echo "ASSET_DIR=." >> $GITHUB_ENV
+          echo "ASSET_BASE_NAME=${{ github.event.repository.name }}" >> $GITHUB_ENV
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            if [ -z "$VERSION" ]; then
+              echo "Error: github.event.release.tag_name is empty"
+              exit 1
+            fi
+            echo "RELEASE_VERSION=${VERSION#v}" >> $GITHUB_ENV
+          else
+            if [ -z "${{ needs.bump.outputs.new_version }}" ]; then
+              echo "Error: needs.bump.outputs.new_version is empty"
+              exit 1
+            fi
+            echo "RELEASE_VERSION=${{ needs.bump.outputs.new_version }}" >> $GITHUB_ENV
+          fi
+          echo "RELEASE_VERSION_TAG=${{ github.event_name == 'release' && github.event.release.tag_name || needs.bump.outputs.new_tag }}" >> $GITHUB_ENV
+          echo "Debug: RELEASE_VERSION=$RELEASE_VERSION"
+          echo "Debug: RELEASE_VERSION_TAG=$RELEASE_VERSION_TAG"
+
+      - name: Debug file structure
+        run: |
+          echo "Current directory: $(pwd)"
+          ls -la $ASSET_DIR
+          ls -la $ASSET_DIR/contents || echo "contents/ not found"
+          ls -la $ASSET_DIR/contents/images || echo "contents/images/ not found"
+          ls -la $ASSET_DIR/Makefile || echo "Makefile not found"
+          echo "RELEASE_VERSION=$RELEASE_VERSION"
+          echo "ASSET_BASE_NAME=$ASSET_BASE_NAME"
+
+      - name: Install make and zip
+        run: sudo apt-get update && sudo apt-get install -y make zip
+
+      - name: Update plasmoid version
+        run: |
+          if [ ! -f "$ASSET_DIR/metadata.json" ]; then
+            echo "Error: metadata.json not found"
+            exit 1
+          fi
+          echo "`jq '.KPlugin.Version=\"'$RELEASE_VERSION'\"' $ASSET_DIR/metadata.json`" > $ASSET_DIR/metadata.json
+
+      - name: Package with make
+        run: |
+          if [ ! -f "$ASSET_DIR/Makefile" ]; then
+            echo "Error: Makefile not found in $ASSET_DIR"
+            exit 1
+          fi
+          if [ ! -d "$ASSET_DIR/contents" ] || [ ! -f "$ASSET_DIR/metadata.json" ]; then
+            echo "Error: contents/ or metadata.json missing"
+            exit 1
+          fi
+          make
+          PLASMOID_FILE=$(ls *.plasmoid 2>/dev/null | head -n 1)
+          if [ -z "$PLASMOID_FILE" ]; then
+            echo "Error: make failed to create any .plasmoid file"
+            exit 1
+          fi
+          mv "$PLASMOID_FILE" $ASSET_BASE_NAME-$RELEASE_VERSION.plasmoid
+          ls -la $ASSET_BASE_NAME-$RELEASE_VERSION.plasmoid
+
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "*.plasmoid"
+          tag: ${{ env.RELEASE_VERSION_TAG }}
+          body: ${{ github.event_name == 'release' && github.event.release.body || needs.bump.outputs.changelog }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: true
