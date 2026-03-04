@@ -14,39 +14,36 @@ KCM.SimpleKCM {
 
     Kirigami.FormLayout {
         id: formLayout
+
         anchors.fill: parent
 
         SpinBox {
             id: fontSize
-            Kirigami.FormData.label: "Font size"
+
+            Kirigami.FormData.label: i18n("Font size")
             from: 4
             to: 72
             stepSize: 1
-            onValueChanged: {
-                console.log("Font size: " + value);
-            }
         }
 
         CheckBox {
             id: displayBaseCurrency
-            Kirigami.FormData.label: "Display base currency"
-            onCheckedChanged: {
-                console.log("Display base currency: " + checked);
-            }
+
+            Kirigami.FormData.label: i18n("Display base currency")
         }
+
         CheckBox {
             id: boldText
-            Kirigami.FormData.label: "Bold text"
-            onCheckedChanged: {
-                console.log("Bold text: " + checked);
-            }
+
+            Kirigami.FormData.label: i18n("Bold text")
         }
+
         CheckBox {
             id: italicText
-            Kirigami.FormData.label: "Italic text"
-            onCheckedChanged: {
-                console.log("Italic text: " + checked);
-            }
+
+            Kirigami.FormData.label: i18n("Italic text")
         }
+
     }
+
 }
