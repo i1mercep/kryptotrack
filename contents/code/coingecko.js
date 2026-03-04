@@ -1,13 +1,9 @@
 const BASE_API_URL = "https://api.coingecko.com/api/v3/";
 const BASE_PRO_API_URL = "https://pro-api.coingecko.com/v3/";
-const COINS_LIST_TIMEOUT_MS = 3000;
+const COINS_LIST_TIMEOUT_MS = 5000;
 const FREE_API_JITTER_MS = 3000;
 const MIN_TIMEOUT_MS = 1000;
 const DEFAULT_TIMEOUT_S = 10;
-
-// Track in-flight price request so we can cancel it on re-fetch
-var _priceXhr = null;
-var _jitterTimer = null;
 
 /**
  * Fetches the full list of coins from CoinGecko.
@@ -56,8 +52,34 @@ function fetchCoinsList(callback, errorCallback) {
 }
 
 /**
+ * Cancels any pending price request (jitter delay or in-flight XHR) for the
+ * given widget instance. Per-instance state is stored directly on `root` as
+ * plain JS properties, so no shared module-level variables are needed.
+ * Safe to call at any time, even when no request is pending.
+ *
+ * @param {object} root - The QML root item that owns this request.
+ */
+function cancelPendingPrice(root) {
+    if (root._jitterTimer != null) {
+        clearTimeout(root._jitterTimer);
+        root._jitterTimer = null;
+    }
+    if (root._priceXhr != null) {
+        var xhr = root._priceXhr;
+        root._priceXhr = null;
+        // Clear handlers before aborting to prevent stale callbacks
+        xhr.onload = undefined;
+        xhr.onerror = undefined;
+        xhr.ontimeout = undefined;
+        xhr.abort();
+    }
+}
+
+/**
  * Fetches the current price of a cryptocurrency from CoinGecko.
- * Automatically cancels any previous in-flight price request.
+ * Automatically cancels any previous in-flight request for this instance.
+ * Per-instance state is stored on `root`, so multiple widget instances never
+ * interfere with each other.
  *
  * @param {string} coin - CoinGecko coin ID (e.g. "bitcoin").
  * @param {string} baseCurrency - Target fiat/crypto currency (e.g. "usd").
@@ -66,7 +88,7 @@ function fetchCoinsList(callback, errorCallback) {
  * @param {object} root - QML root item exposing setLoading(), showError(), storePrice(), useCachedPrice().
  */
 function fetchPrice(coin, baseCurrency, timeout, apiKey, root) {
-    cancelPendingPrice();
+    cancelPendingPrice(root);
 
     const normalizedCoin = String(coin || "").trim().toLowerCase();
     const normalizedBaseCurrency = String(baseCurrency || "").trim().toLowerCase();
@@ -90,12 +112,12 @@ function fetchPrice(coin, baseCurrency, timeout, apiKey, root) {
     // Pro API users have higher quotas and don't need the delay.
     const jitterMs = useProApi ? 0 : Math.random() * FREE_API_JITTER_MS;
 
-    _jitterTimer = setTimeout(() => {
-        _jitterTimer = null;
+    root._jitterTimer = setTimeout(() => {
+        root._jitterTimer = null;
         root.setLoading(true);
 
         const xhr = new XMLHttpRequest();
-        _priceXhr = xhr;
+        root._priceXhr = xhr;
         xhr.open("GET", url, true);
         xhr.timeout = timeoutMs;
         if (useProApi) {
@@ -103,7 +125,6 @@ function fetchPrice(coin, baseCurrency, timeout, apiKey, root) {
         }
 
         const fail = (message, useCache) => {
-            root.setLoading(false);
             root.showError(message);
             if (useCache) {
                 root.useCachedPrice();
@@ -111,7 +132,7 @@ function fetchPrice(coin, baseCurrency, timeout, apiKey, root) {
         };
 
         xhr.onload = () => {
-            _priceXhr = null;
+            root._priceXhr = null;
 
             if (xhr.status === 200) {
                 try {
@@ -124,7 +145,6 @@ function fetchPrice(coin, baseCurrency, timeout, apiKey, root) {
                         return;
                     }
 
-                    root.setLoading(false);
                     root.storePrice(String(price), Date.now());
                 } catch (error) {
                     console.error("Failed to parse price response:", error);
@@ -140,35 +160,15 @@ function fetchPrice(coin, baseCurrency, timeout, apiKey, root) {
         };
 
         xhr.onerror = () => {
-            _priceXhr = null;
+            root._priceXhr = null;
             fail("Network error", true);
         };
 
         xhr.ontimeout = () => {
-            _priceXhr = null;
-            fail("Request timeout", true);
+            root._priceXhr = null;
+            fail("Request timed out", true);
         };
 
         xhr.send();
     }, jitterMs);
-}
-
-/**
- * Cancels any pending price request (jitter delay or in-flight XHR).
- * Safe to call at any time, even when no request is pending.
- */
-function cancelPendingPrice() {
-    if (_jitterTimer !== null) {
-        clearTimeout(_jitterTimer);
-        _jitterTimer = null;
-    }
-    if (_priceXhr !== null) {
-        var xhr = _priceXhr;
-        _priceXhr = null;
-        // Clear handlers before aborting to prevent stale callbacks
-        xhr.onload = undefined;
-        xhr.onerror = undefined;
-        xhr.ontimeout = undefined;
-        xhr.abort();
-    }
 }
