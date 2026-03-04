@@ -5,7 +5,7 @@ install_dir := "~/.local/share/plasma/plasmoids/" + plugin
 
 # Build the plasmoid package (default)
 [group('build')]
-build:
+build: clean
     zip -r {{package}} contents metadata.json
 
 # Run the widget in plasmoidviewer
@@ -17,6 +17,7 @@ run:
 [group('build')]
 install: build
     kpackagetool6 -t Plasma/Applet -i {{package}} || kpackagetool6 -t Plasma/Applet -u {{package}}
+    plasmashell --replace > /dev/null 2>&1 &
 
 # Uninstall and clean
 [group('build')]

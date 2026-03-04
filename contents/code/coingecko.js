@@ -52,7 +52,7 @@ function fetchCoinsList(callback, errorCallback) {
 }
 
 /**
- * Cancels any pending price request (jitter delay or in-flight XHR) for the
+ * Cancels any pending price request (jitter timer or in-flight XHR) for the
  * given widget instance. Per-instance state is stored directly on `root` as
  * plain JS properties, so no shared module-level variables are needed.
  * Safe to call at any time, even when no request is pending.
@@ -60,10 +60,10 @@ function fetchCoinsList(callback, errorCallback) {
  * @param {object} root - The QML root item that owns this request.
  */
 function cancelPendingPrice(root) {
-    if (root._jitterTimer != null) {
-        clearTimeout(root._jitterTimer);
-        root._jitterTimer = null;
+    if (root.jitterTimer && root.jitterTimer.stop) {
+        root.jitterTimer.stop();
     }
+    root._jitterCallback = null;
     if (root._priceXhr != null) {
         var xhr = root._priceXhr;
         root._priceXhr = null;
@@ -110,10 +110,10 @@ function fetchPrice(coin, baseCurrency, timeout, apiKey, root) {
     // Apply jitter only on the free API to spread requests across widget instances
     // and reduce the chance of synchronized polls hitting the rate limit together.
     // Pro API users have higher quotas and don't need the delay.
-    const jitterMs = useProApi ? 0 : Math.random() * FREE_API_JITTER_MS;
+    // setTimeout is unavailable in QML JS; use Qt.createQmlObject to make a one-shot Timer.
+    const jitterMs = useProApi ? 0 : Math.floor(Math.random() * FREE_API_JITTER_MS);
 
-    root._jitterTimer = setTimeout(() => {
-        root._jitterTimer = null;
+    const doFetch = () => {
         root.setLoading(true);
 
         const xhr = new XMLHttpRequest();
@@ -170,5 +170,17 @@ function fetchPrice(coin, baseCurrency, timeout, apiKey, root) {
         };
 
         xhr.send();
-    }, jitterMs);
+    };
+
+    if (jitterMs <= 0) {
+        doFetch();
+    } else {
+        if (!root.jitterTimer || !root.jitterTimer.start) {
+            doFetch();
+            return;
+        }
+        root._jitterCallback = doFetch;
+        root.jitterTimer.interval = jitterMs;
+        root.jitterTimer.start();
+    }
 }

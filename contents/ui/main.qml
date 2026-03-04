@@ -28,8 +28,13 @@ PlasmoidItem {
     property string lastUpdated
     property bool isLoading: false
     property string errorMessage: ""
+    property string statusMessage: ""
     property string cachedPrice
     property double lastUpdatedTimestamp: 0
+    // Internal: used by coingecko.js for request management
+    property alias jitterTimer: jitterTimer
+    property var _jitterCallback: null
+    property var _priceXhr: null
 
     function setLoading(loading) {
         isLoading = loading;
@@ -58,12 +63,15 @@ PlasmoidItem {
     }
 
     function showError(message) {
-        errorMessage = message || i18n("Error: Check configuration");
+        var resolvedMessage = message || i18n("Error: Check configuration");
+        errorMessage = resolvedMessage;
+        statusMessage = resolvedMessage;
         setLoading(false);
     }
 
     function storePrice(price, timestamp) {
         errorMessage = "";
+        statusMessage = "";
         lastPrice = price;
         cachedPrice = price;
         setLoading(false);
@@ -74,6 +82,7 @@ PlasmoidItem {
 
     function useCachedPrice() {
         if (cachedPrice) {
+            errorMessage = "";
             lastPrice = cachedPrice;
             var timestamp = lastUpdatedTimestamp || Date.now();
             var date = new Date(timestamp);
@@ -99,12 +108,33 @@ PlasmoidItem {
     preferredRepresentation: fullRepresentation
     Plasmoid.backgroundHints: PlasmaCore.Types.ShadowBackground | PlasmaCore.Types.ConfigurableBackground
     toolTipMainText: root.lastPrice ? root.getPriceText() : i18n("Loading...")
-    toolTipSubText: root.lastUpdated ? i18n("Last updated: %1", root.lastUpdated) : ""
+    toolTipSubText: {
+        var parts = [];
+        if (root.lastUpdated)
+            parts.push(i18n("Last updated: %1", root.lastUpdated));
+
+        if (root.statusMessage)
+            parts.push(root.statusMessage);
+
+        return parts.join("\n");
+    }
+
+    Timer {
+        id: jitterTimer
+
+        repeat: false
+        onTriggered: {
+            if (root._jitterCallback) {
+                var cb = root._jitterCallback;
+                root._jitterCallback = null;
+                cb();
+            }
+        }
+    }
 
     fullRepresentation: Item {
         id: fullRep
 
-        Layout.preferredHeight: Plasmoid.configuration.fontSize
         Layout.minimumWidth: priceLabel.implicitWidth + Plasmoid.configuration.fontSize * 2
         Component.onCompleted: {
             fetchPrice();

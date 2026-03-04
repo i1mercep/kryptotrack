@@ -33,7 +33,7 @@
         </entry>
         <entry name="timeout" type="Int">
             <label>Timeout in seconds</label>
-            <default>10</default>
+            <default>5</default>
         </entry>
     </group>
     <group name="Appearance">
