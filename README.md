@@ -39,6 +39,14 @@ Install `plasma-sdk`
 just run
 ```
 
+## Data Providers
+
+`kryptotrack` uses Binance Spot public market data as the default price source.
+
+* `Binance` is the default provider and works best with spot quote assets such as `USDT`.
+* `CoinGecko` is available as an alternative provider.
+* When Binance does not have a direct trading pair for the selected asset and base currency, the widget falls back to CoinGecko for that request.
+
 ## Support the project
 
 * ₿ Bitcoin [bc1pctjprf84cfeljfn3a4d8ptkra8f8smnz9eyvt4j5f84j6dlerwzqrgsq3u](https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=bc1pctjprf84cfeljfn3a4d8ptkra8f8smnz9eyvt4j5f84j6dlerwzqrgsq3u) (taproot)

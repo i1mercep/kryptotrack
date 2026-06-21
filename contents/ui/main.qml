@@ -1,4 +1,4 @@
-import "../code/coingecko.js" as CoinGecko
+import "../code/providerRouter.js" as ProviderRouter
 import "../code/cryptoSymbols.js" as CryptoSymbols
 import QtQuick
 import QtQuick.Layouts
@@ -13,15 +13,23 @@ PlasmoidItem {
     // General config
     property string coin: Plasmoid.configuration.coin || "bitcoin"
     property string coinSymbol: Plasmoid.configuration.coinSymbol || "btc"
-    property string baseCurrency: Plasmoid.configuration.baseCurrency || "usd"
+    property string baseCurrency: Plasmoid.configuration.baseCurrency || "usdt"
     property int refreshInterval: Plasmoid.configuration.refreshInterval || 60
     // Appearance config
     property int fontSize: Plasmoid.configuration.fontSize || 9
+    property bool useThousandsSeparators: Plasmoid.configuration.useThousandsSeparators
+    property int largePriceThreshold: Plasmoid.configuration.largePriceThreshold || 1000
+    property int largePriceDecimals: Plasmoid.configuration.largePriceDecimals || 0
+    property int standardPriceThreshold: Plasmoid.configuration.standardPriceThreshold || 1
+    property int standardPriceDecimals: Plasmoid.configuration.standardPriceDecimals || 2
+    property int smallPriceSignificantDigits: Plasmoid.configuration.smallPriceSignificantDigits || 3
+    property int minSmallPriceDecimals: Plasmoid.configuration.minSmallPriceDecimals || 2
+    property int maxSmallPriceDecimals: Plasmoid.configuration.maxSmallPriceDecimals || 8
     property bool displayBaseCurrency: Plasmoid.configuration.displayBaseCurrency
     property bool boldText: Plasmoid.configuration.boldText
     property bool italicText: Plasmoid.configuration.italicText
     // API config
-    property string apiProvider: Plasmoid.configuration.apiProvider || "coingecko"
+    property string apiProvider: Plasmoid.configuration.apiProvider || "binance"
     property string apiKey: Plasmoid.configuration.apiKey || ""
     property int timeout: Plasmoid.configuration.timeout || 10
     property string lastPrice
@@ -31,21 +39,19 @@ PlasmoidItem {
     property string statusMessage: ""
     property string cachedPrice
     property double lastUpdatedTimestamp: 0
-    // Internal: used by coingecko.js for request management
+    // Internal: used by API providers for request management
     property alias jitterTimer: jitterTimer
     property var _jitterCallback: null
     property var _priceXhr: null
+    property string _pendingStatusMessage: ""
 
     function setLoading(loading) {
         isLoading = loading;
     }
 
     function fetchPrice() {
-        if (root.apiProvider !== "coingecko") {
-            root.showError(i18n("API provider not supported"));
-            return ;
-        }
-        CoinGecko.fetchPrice(root.coin, root.baseCurrency, timeout, apiKey, root);
+        root._pendingStatusMessage = "";
+        ProviderRouter.fetchPrice(root.apiProvider, root.coin, root.coinSymbol, root.baseCurrency, timeout, apiKey, root);
     }
 
     /**
@@ -69,11 +75,67 @@ PlasmoidItem {
         setLoading(false);
     }
 
+    function formatPrice(price) {
+        var numericPrice = Number(price);
+        if (!isFinite(numericPrice)) {
+            return String(price);
+        }
+
+        var absolutePrice = Math.abs(numericPrice);
+        var decimals = standardPriceDecimals;
+        var normalizedLargeThreshold = Math.max(0, largePriceThreshold);
+        var normalizedStandardThreshold = Math.max(0, standardPriceThreshold);
+        var normalizedLargeDecimals = Math.max(0, largePriceDecimals);
+        var normalizedStandardDecimals = Math.max(0, standardPriceDecimals);
+        var normalizedMinSmallDecimals = Math.max(0, minSmallPriceDecimals);
+        var normalizedMaxSmallDecimals = Math.max(normalizedMinSmallDecimals, maxSmallPriceDecimals);
+        var normalizedSmallPriceSignificantDigits = Math.max(1, smallPriceSignificantDigits);
+
+        if (absolutePrice >= normalizedLargeThreshold) {
+            decimals = normalizedLargeDecimals;
+        } else if (absolutePrice >= normalizedStandardThreshold) {
+            decimals = normalizedStandardDecimals;
+        } else if (absolutePrice > 0) {
+            var leadingZeros = Math.floor(-Math.log(absolutePrice) / Math.LN10);
+            decimals = Math.min(normalizedMaxSmallDecimals, Math.max(normalizedMinSmallDecimals, leadingZeros + normalizedSmallPriceSignificantDigits));
+        }
+
+        return localizeNumberString(trimTrailingZeros(numericPrice.toFixed(decimals)));
+    }
+
+    function trimTrailingZeros(value) {
+        return String(value).replace(/\.0+$/, "").replace(/(\.\d*?[1-9])0+$/, "$1");
+    }
+
+    function localizeNumberString(value) {
+        var stringValue = String(value);
+        var parts = stringValue.split(".");
+        var locale = Qt.locale();
+        var localizedIntegerPart = parts[0];
+
+        if (useThousandsSeparators) {
+            localizedIntegerPart = Number(parts[0]).toLocaleString(locale, "f", 0);
+        }
+
+        if (parts.length < 2) {
+            return localizedIntegerPart;
+        }
+
+        return localizedIntegerPart + locale.decimalPoint + parts[1];
+    }
+
+    function refreshFormattedPrice() {
+        if (cachedPrice) {
+            lastPrice = formatPrice(cachedPrice);
+        }
+    }
+
     function storePrice(price, timestamp) {
         errorMessage = "";
-        statusMessage = "";
-        lastPrice = price;
-        cachedPrice = price;
+        statusMessage = root._pendingStatusMessage || "";
+        root._pendingStatusMessage = "";
+        cachedPrice = String(price);
+        lastPrice = formatPrice(cachedPrice);
         setLoading(false);
         lastUpdatedTimestamp = timestamp;
         var date = new Date(timestamp);
@@ -83,7 +145,7 @@ PlasmoidItem {
     function useCachedPrice() {
         if (cachedPrice) {
             errorMessage = "";
-            lastPrice = cachedPrice;
+            lastPrice = formatPrice(cachedPrice);
             var timestamp = lastUpdatedTimestamp || Date.now();
             var date = new Date(timestamp);
             lastUpdated = date.toLocaleTimeString(Qt.locale(), Locale.ShortFormat) + " (cached)";
@@ -93,10 +155,21 @@ PlasmoidItem {
     }
 
     function getPriceText() {
-        var crypto_symbols = CryptoSymbols.getCryptoSymbols();
-        var crypto_symbol = crypto_symbols[root.coin.toLowerCase()] || root.coinSymbol;
+        var crypto_symbol = CryptoSymbols.getCryptoSymbol(root.coin, root.coinSymbol) || root.coinSymbol;
         return crypto_symbol.toUpperCase() + " " + root.lastPrice + (root.displayBaseCurrency ? " " + root.baseCurrency.toUpperCase() : "");
     }
+
+    onApiProviderChanged: {
+        fetchPrice();
+    }
+    onUseThousandsSeparatorsChanged: refreshFormattedPrice()
+    onLargePriceThresholdChanged: refreshFormattedPrice()
+    onLargePriceDecimalsChanged: refreshFormattedPrice()
+    onStandardPriceThresholdChanged: refreshFormattedPrice()
+    onStandardPriceDecimalsChanged: refreshFormattedPrice()
+    onSmallPriceSignificantDigitsChanged: refreshFormattedPrice()
+    onMinSmallPriceDecimalsChanged: refreshFormattedPrice()
+    onMaxSmallPriceDecimalsChanged: refreshFormattedPrice()
 
     Plasmoid.icon: Qt.resolvedUrl("../images/kryptotrack.svg")
     onCoinChanged: {

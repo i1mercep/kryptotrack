@@ -1,9 +1,13 @@
+ .import "cachedCoins.js" as CachedCoins
+
 const BASE_API_URL = "https://api.coingecko.com/api/v3/";
 const BASE_PRO_API_URL = "https://pro-api.coingecko.com/v3/";
 const COINS_LIST_TIMEOUT_MS = 5000;
 const FREE_API_JITTER_MS = 3000;
 const MIN_TIMEOUT_MS = 1000;
 const DEFAULT_TIMEOUT_S = 10;
+var coinLookupById = null;
+var coinLookupBySymbol = null;
 
 /**
  * Fetches the full list of coins from CoinGecko.
@@ -27,6 +31,7 @@ function fetchCoinsList(callback, errorCallback) {
                     if (errorCallback) errorCallback("Invalid coin data format");
                     return;
                 }
+                rebuildCoinLookup(response);
                 if (callback) callback(response);
             } catch (error) {
                 console.error("Error parsing coin list:", error);
@@ -81,16 +86,17 @@ function cancelPendingPrice(root) {
  * Per-instance state is stored on `root`, so multiple widget instances never
  * interfere with each other.
  *
- * @param {string} coin - CoinGecko coin ID (e.g. "bitcoin").
+ * @param {string} coin - CoinGecko coin ID or a provider-specific legacy value.
+ * @param {string} coinSymbol - Display symbol used to recover a CoinGecko ID when switching providers.
  * @param {string} baseCurrency - Target fiat/crypto currency (e.g. "usd").
  * @param {number} timeout - Request timeout in seconds.
  * @param {string} apiKey - CoinGecko Pro API key, or empty for free tier.
  * @param {object} root - QML root item exposing setLoading(), showError(), storePrice(), useCachedPrice().
  */
-function fetchPrice(coin, baseCurrency, timeout, apiKey, root) {
+function fetchPrice(coin, coinSymbol, baseCurrency, timeout, apiKey, root) {
     cancelPendingPrice(root);
 
-    const normalizedCoin = String(coin || "").trim().toLowerCase();
+    const normalizedCoin = resolveCoinId(coin, coinSymbol);
     const normalizedBaseCurrency = String(baseCurrency || "").trim().toLowerCase();
     const normalizedApiKey = String(apiKey || "").trim();
     const timeoutSec = Number(timeout) || DEFAULT_TIMEOUT_S;
@@ -182,5 +188,56 @@ function fetchPrice(coin, baseCurrency, timeout, apiKey, root) {
         root._jitterCallback = doFetch;
         root.jitterTimer.interval = jitterMs;
         root.jitterTimer.start();
+    }
+}
+
+function resolveCoinId(coin, coinSymbol) {
+    var normalizedCoin = String(coin || "").trim().toLowerCase();
+    var normalizedCoinSymbol = String(coinSymbol || "").trim().toLowerCase();
+
+    if (normalizedCoin === "" && normalizedCoinSymbol === "") {
+        return "";
+    }
+
+    ensureCoinLookup();
+
+    if (normalizedCoin !== "" && coinLookupById[normalizedCoin]) {
+        return normalizedCoin;
+    }
+
+    if (normalizedCoinSymbol !== "" && coinLookupBySymbol[normalizedCoinSymbol]) {
+        return String(coinLookupBySymbol[normalizedCoinSymbol].id || "").trim().toLowerCase();
+    }
+
+    if (normalizedCoin !== "" && coinLookupBySymbol[normalizedCoin]) {
+        return String(coinLookupBySymbol[normalizedCoin].id || "").trim().toLowerCase();
+    }
+
+    return normalizedCoin;
+}
+
+function ensureCoinLookup() {
+    if (coinLookupById !== null && coinLookupBySymbol !== null) {
+        return;
+    }
+
+    rebuildCoinLookup(CachedCoins.getCoins());
+}
+
+function rebuildCoinLookup(coins) {
+    coinLookupById = {};
+    coinLookupBySymbol = {};
+
+    for (var i = 0; i < coins.length; i++) {
+        var item = coins[i];
+        var id = String(item.id || "").trim().toLowerCase();
+        var symbol = String(item.symbol || "").trim().toLowerCase();
+
+        if (id !== "" && !coinLookupById[id]) {
+            coinLookupById[id] = item;
+        }
+        if (symbol !== "" && !coinLookupBySymbol[symbol]) {
+            coinLookupBySymbol[symbol] = item;
+        }
     }
 }
