@@ -20,6 +20,12 @@ ListModel {
     }
 
     ListElement {
+        name: "Tether USD"
+        abbreviation: "usdt"
+        symbol: "₮"
+    }
+
+    ListElement {
         name: "US Dollar"
         abbreviation: "usd"
         symbol: "$"

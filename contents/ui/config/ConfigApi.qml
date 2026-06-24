@@ -7,9 +7,11 @@ import org.kde.kirigami as Kirigami
 KCM.SimpleKCM {
     id: configApi
 
-    property string cfg_apiProvider: "coingecko"
+    property string cfg_apiProvider: "binance"
     property alias cfg_apiKey: apiKey.text
     property alias cfg_timeout: timeout.value
+    readonly property bool isCoinGeckoProvider: cfg_apiProvider === "coingecko"
+    readonly property string providerDisplayName: cfg_apiProvider === "coingecko" ? "CoinGecko" : "Binance"
 
     Kirigami.FormLayout {
         id: formLayout
@@ -20,10 +22,11 @@ KCM.SimpleKCM {
             id: apiProvider
 
             Kirigami.FormData.label: i18n("API Provider")
-            model: ["coingecko"]
-            displayText: currentText
+            model: ["binance", "coingecko"]
+            displayText: configApi.providerDisplayName
             Component.onCompleted: {
-                currentIndex = model.indexOf(cfg_apiProvider);
+                currentIndex = Math.max(model.indexOf(cfg_apiProvider), 0);
+                cfg_apiProvider = currentText;
             }
             onActivated: {
                 cfg_apiProvider = currentText;
@@ -34,12 +37,18 @@ KCM.SimpleKCM {
                 highlighted: apiProvider.highlightedIndex === index
 
                 contentItem: Text {
-                    text: modelData
+                    text: modelData === "coingecko" ? "CoinGecko" : "Binance"
                     verticalAlignment: Text.AlignVCenter
                 }
 
             }
 
+        }
+
+        Label {
+            visible: !configApi.isCoinGeckoProvider
+            text: i18n("Binance uses public Spot market data and does not require an API key.")
+            wrapMode: Text.WordWrap
         }
 
         TextField {
@@ -48,6 +57,8 @@ KCM.SimpleKCM {
             Kirigami.FormData.label: i18n("API Key")
             placeholderText: i18n("Enter your CoinGecko Pro API key")
             echoMode: TextInput.Password
+            visible: configApi.isCoinGeckoProvider
+            enabled: visible
         }
 
         SpinBox {

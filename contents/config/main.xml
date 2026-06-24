@@ -14,8 +14,8 @@
             <default>btc</default>
         </entry>
         <entry name="baseCurrency" type="String">
-            <label>Base currency (e.g., usd, eur, btc)</label>
-            <default>usd</default>
+            <label>Base currency (e.g., usdt, usd, eur, btc)</label>
+            <default>usdt</default>
         </entry>
         <entry name="refreshInterval" type="Int">
             <label>Refresh interval in seconds</label>
@@ -25,7 +25,7 @@
     <group name="API">
         <entry name="apiProvider" type="String">
             <label>API provider</label>
-            <default>coingecko</default>
+            <default>binance</default>
         </entry>
         <entry name="apiKey" type="String">
             <label>API Key</label>
@@ -41,8 +41,44 @@
             <label>Font size</label>
             <default>9</default>
         </entry>
+        <entry name="useThousandsSeparators" type="Bool">
+            <label>Use locale-specific thousands separators</label>
+            <default>true</default>
+        </entry>
+        <entry name="largePriceThreshold" type="Int">
+            <label>Threshold for large-price formatting</label>
+            <default>1000</default>
+        </entry>
+        <entry name="largePriceDecimals" type="Int">
+            <label>Decimals used at or above the large-price threshold</label>
+            <default>0</default>
+        </entry>
+        <entry name="standardPriceThreshold" type="Int">
+            <label>Threshold for standard-price formatting</label>
+            <default>1</default>
+        </entry>
+        <entry name="standardPriceDecimals" type="Int">
+            <label>Decimals used at or above the standard-price threshold</label>
+            <default>2</default>
+        </entry>
+        <entry name="smallPriceSignificantDigits" type="Int">
+            <label>Extra meaningful digits to keep for small prices</label>
+            <default>3</default>
+        </entry>
+        <entry name="minSmallPriceDecimals" type="Int">
+            <label>Minimum decimals for small prices</label>
+            <default>2</default>
+        </entry>
+        <entry name="maxSmallPriceDecimals" type="Int">
+            <label>Maximum decimals for small prices</label>
+            <default>8</default>
+        </entry>
         <entry name="displayBaseCurrency" type="Bool">
             <label>Display base currency</label>
+            <default>false</default>
+        </entry>
+        <entry name="show24hChange" type="Bool">
+            <label>Display 24h change percentage</label>
             <default>false</default>
         </entry>
         <entry name="boldText" type="Bool">
