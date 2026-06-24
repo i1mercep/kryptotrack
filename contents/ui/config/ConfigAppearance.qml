@@ -17,6 +17,7 @@ KCM.SimpleKCM {
     property alias cfg_minSmallPriceDecimals: minSmallPriceDecimals.value
     property alias cfg_maxSmallPriceDecimals: maxSmallPriceDecimals.value
     property alias cfg_displayBaseCurrency: displayBaseCurrency.checked
+    property alias cfg_show24hChange: show24hChange.checked
     property alias cfg_boldText: boldText.checked
     property alias cfg_italicText: italicText.checked
 
@@ -46,7 +47,7 @@ KCM.SimpleKCM {
 
             Kirigami.FormData.label: i18n("Large price threshold")
             from: 0
-            to: 1000000
+            to: 1e+06
             stepSize: 1
         }
 
@@ -64,7 +65,7 @@ KCM.SimpleKCM {
 
             Kirigami.FormData.label: i18n("Standard price threshold")
             from: 0
-            to: 1000000
+            to: 1e+06
             stepSize: 1
         }
 
@@ -108,6 +109,13 @@ KCM.SimpleKCM {
             id: displayBaseCurrency
 
             Kirigami.FormData.label: i18n("Display base currency")
+        }
+
+        CheckBox {
+            id: show24hChange
+
+            Kirigami.FormData.label: i18n("Display 24h change")
+            text: i18n("Show 24h percentage change")
         }
 
         CheckBox {

@@ -21,6 +21,106 @@ KCM.SimpleKCM {
     property bool isLoadingCoins: false
     property string errorMessage: ""
 
+    function applySelectedCoinState(nextCoinsList) {
+        if (!nextCoinsList || nextCoinsList.length === 0) {
+            visibleCoinsList = [];
+            coinSelector.currentIndex = -1;
+            return ;
+        }
+        var selectedIndex = findSelectedCoinIndex(nextCoinsList);
+        if (selectedIndex < 0)
+            selectedIndex = 0;
+
+        coinObj.cid = nextCoinsList[selectedIndex].id;
+        coinObj.name = nextCoinsList[selectedIndex].name;
+        coinObj.symbol = nextCoinsList[selectedIndex].symbol;
+        updateVisibleCoinsList();
+        var visibleIndex = findSelectedCoinIndex(visibleCoinsList);
+        coinSelector.currentIndex = visibleIndex >= 0 ? visibleIndex : 0;
+    }
+
+    function commitCoinSelection(index) {
+        var selectedIndex = Number(index);
+        if (!Array.isArray(visibleCoinsList) || visibleCoinsList.length === 0)
+            return ;
+
+        if (!isFinite(selectedIndex) || selectedIndex < 0 || selectedIndex >= visibleCoinsList.length)
+            selectedIndex = 0;
+
+        var selectedCoin = visibleCoinsList[selectedIndex];
+        if (!selectedCoin)
+            return ;
+
+        coinSelector.currentIndex = selectedIndex;
+        coinObj.cid = selectedCoin.id;
+        coinObj.name = selectedCoin.name;
+        coinObj.symbol = selectedCoin.symbol;
+    }
+
+    function findSelectedCoinIndex(nextCoinsList) {
+        var normalizedCoin = String(cfg_coin || "").toLowerCase();
+        var normalizedCoinSymbol = String(cfg_coinSymbol || "").toLowerCase();
+        var isBinanceProvider = String(cfg_apiProvider || "").toLowerCase() === "binance";
+        for (var i = 0; i < nextCoinsList.length; i++) {
+            var coin = nextCoinsList[i];
+            if (!coin)
+                continue;
+
+            var normalizedId = String(coin.id || "").toLowerCase();
+            var normalizedSymbol = String(coin.symbol || "").toLowerCase();
+            if (normalizedId === normalizedCoin)
+                return i;
+
+            if (normalizedSymbol !== "" && normalizedSymbol === normalizedCoinSymbol)
+                return i;
+
+            if (isBinanceProvider && normalizedSymbol !== "" && normalizedSymbol === normalizedCoin)
+                return i;
+
+        }
+        return -1;
+    }
+
+    function loadCoins() {
+        errorMessage = "";
+        isLoadingCoins = true;
+        ProviderRouter.fetchCoinsList(cfg_apiProvider, function(coins) {
+            coinsList = coins;
+            isLoadingCoins = false;
+            applySelectedCoinState(coins);
+        }, function(error) {
+            errorMessage = error;
+            if (error.indexOf("429") !== -1)
+                errorMessage += " — " + i18n("rate limit reached");
+
+            isLoadingCoins = false;
+        });
+    }
+
+    function updateVisibleCoinsList() {
+        var nextCoinsList = Array.isArray(coinsList) ? coinsList : [];
+        var query = String(filterCoinsField.text || "").toLowerCase();
+        var isCoinGeckoProvider = String(cfg_apiProvider || "").toLowerCase() === "coingecko";
+        if (nextCoinsList.length === 0) {
+            visibleCoinsList = [];
+            return ;
+        }
+        if (query.length >= 2) {
+            visibleCoinsList = nextCoinsList.filter(function(coin) {
+                return coin.name.toLowerCase().indexOf(query) >= 0 || coin.symbol.toLowerCase().indexOf(query) >= 0;
+            });
+            return ;
+        }
+        if (isCoinGeckoProvider) {
+            var selectedIndex = findSelectedCoinIndex(nextCoinsList);
+            visibleCoinsList = selectedIndex >= 0 ? [nextCoinsList[selectedIndex]] : [];
+            return ;
+        }
+        visibleCoinsList = nextCoinsList;
+    }
+
+    onCfg_apiProviderChanged: loadCoins()
+
     CurrencyModel {
         id: currencyModel
     }
@@ -46,122 +146,6 @@ KCM.SimpleKCM {
 
         property int value
     }
-
-    function applySelectedCoinState(nextCoinsList) {
-        if (!nextCoinsList || nextCoinsList.length === 0) {
-            visibleCoinsList = [];
-            coinSelector.currentIndex = -1;
-            return;
-        }
-
-        var selectedIndex = findSelectedCoinIndex(nextCoinsList);
-        if (selectedIndex < 0) {
-            selectedIndex = 0;
-        }
-
-        coinObj.cid = nextCoinsList[selectedIndex].id;
-        coinObj.name = nextCoinsList[selectedIndex].name;
-        coinObj.symbol = nextCoinsList[selectedIndex].symbol;
-
-        updateVisibleCoinsList();
-
-        var visibleIndex = findSelectedCoinIndex(visibleCoinsList);
-        coinSelector.currentIndex = visibleIndex >= 0 ? visibleIndex : 0;
-    }
-
-    function commitCoinSelection(index) {
-        var selectedIndex = Number(index);
-        if (!Array.isArray(visibleCoinsList) || visibleCoinsList.length === 0) {
-            return;
-        }
-
-        if (!isFinite(selectedIndex) || selectedIndex < 0 || selectedIndex >= visibleCoinsList.length) {
-            selectedIndex = 0;
-        }
-
-        var selectedCoin = visibleCoinsList[selectedIndex];
-        if (!selectedCoin) {
-            return;
-        }
-
-        coinSelector.currentIndex = selectedIndex;
-        coinObj.cid = selectedCoin.id;
-        coinObj.name = selectedCoin.name;
-        coinObj.symbol = selectedCoin.symbol;
-    }
-
-    function findSelectedCoinIndex(nextCoinsList) {
-        var normalizedCoin = String(cfg_coin || "").toLowerCase();
-        var normalizedCoinSymbol = String(cfg_coinSymbol || "").toLowerCase();
-        var isBinanceProvider = String(cfg_apiProvider || "").toLowerCase() === "binance";
-
-        for (var i = 0; i < nextCoinsList.length; i++) {
-            var coin = nextCoinsList[i];
-            if (!coin) {
-                continue;
-            }
-
-            var normalizedId = String(coin.id || "").toLowerCase();
-            var normalizedSymbol = String(coin.symbol || "").toLowerCase();
-
-            if (normalizedId === normalizedCoin) {
-                return i;
-            }
-            if (normalizedSymbol !== "" && normalizedSymbol === normalizedCoinSymbol) {
-                return i;
-            }
-            if (isBinanceProvider && normalizedSymbol !== "" && normalizedSymbol === normalizedCoin) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    function loadCoins() {
-        errorMessage = "";
-        isLoadingCoins = true;
-
-        ProviderRouter.fetchCoinsList(cfg_apiProvider, function(coins) {
-            coinsList = coins;
-            isLoadingCoins = false;
-            applySelectedCoinState(coins);
-        }, function(error) {
-            errorMessage = error;
-            if (error.indexOf("429") !== -1)
-                errorMessage += " — " + i18n("rate limit reached");
-
-            isLoadingCoins = false;
-        });
-    }
-
-    function updateVisibleCoinsList() {
-        var nextCoinsList = Array.isArray(coinsList) ? coinsList : [];
-        var query = String(filterCoinsField.text || "").toLowerCase();
-        var isCoinGeckoProvider = String(cfg_apiProvider || "").toLowerCase() === "coingecko";
-
-        if (nextCoinsList.length === 0) {
-            visibleCoinsList = [];
-            return;
-        }
-
-        if (query.length >= 2) {
-            visibleCoinsList = nextCoinsList.filter(function(coin) {
-                return coin.name.toLowerCase().indexOf(query) >= 0 || coin.symbol.toLowerCase().indexOf(query) >= 0;
-            });
-            return;
-        }
-
-        if (isCoinGeckoProvider) {
-            var selectedIndex = findSelectedCoinIndex(nextCoinsList);
-            visibleCoinsList = selectedIndex >= 0 ? [nextCoinsList[selectedIndex]] : [];
-            return;
-        }
-
-        visibleCoinsList = nextCoinsList;
-    }
-
-    onCfg_apiProviderChanged: loadCoins()
 
     Kirigami.FormLayout {
         id: formLayout
@@ -207,7 +191,7 @@ KCM.SimpleKCM {
                     id: filterCoinsField
 
                     placeholderText: String(cfg_apiProvider || "").toLowerCase() === "coingecko" ? i18n("Search CoinGecko coins…") : i18n("Filter coins…")
-                    width: 200
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 10
                     onTextChanged: {
                         updateVisibleCoinsList();
                         var selectedIndex = findSelectedCoinIndex(visibleCoinsList);
@@ -215,9 +199,9 @@ KCM.SimpleKCM {
                     }
                     onAccepted: commitCoinSelection(coinSelector.currentIndex)
                     onActiveFocusChanged: {
-                        if (!activeFocus) {
+                        if (!activeFocus)
                             commitCoinSelection(coinSelector.currentIndex);
-                        }
+
                     }
                 }
 
@@ -256,7 +240,7 @@ KCM.SimpleKCM {
                     id: filterCurrField
 
                     placeholderText: i18n("Filter currencies…")
-                    width: 200
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 10
                     onTextChanged: {
                         var query = text.toLowerCase();
                         if (query.length < 2) {

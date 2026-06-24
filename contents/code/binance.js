@@ -4,10 +4,15 @@
 const BASE_API_URL = "https://data-api.binance.vision/api/v3/";
 const EXCHANGE_INFO_URL = BASE_API_URL + "exchangeInfo?permissions=%5B%22SPOT%22%5D&showPermissionSets=false&symbolStatus=TRADING";
 const EXCHANGE_INFO_TIMEOUT_MS = 5000;
+const EXCHANGE_INFO_CACHE_TTL_MS = 60 * 60 * 1000;
 const MIN_TIMEOUT_MS = 1000;
 const DEFAULT_TIMEOUT_S = 10;
+const MAX_PRICE_RETRIES = 2;
+const RETRY_BASE_DELAY_MS = 1000;
+const RETRY_MAX_DELAY_MS = 8000;
 
 var exchangeInfoCache = null;
+var exchangeInfoCacheTimestamp = 0;
 var exchangeInfoPending = false;
 var exchangeInfoCallbacks = [];
 var exchangeInfoErrorCallbacks = [];
@@ -67,12 +72,15 @@ function cancelPendingPrice(root) {
 }
 
 function fetchExchangeInfo(callback, fallbackCallback, errorCallback) {
-    if (exchangeInfoCache !== null) {
+    if (exchangeInfoCache !== null && Date.now() - exchangeInfoCacheTimestamp < EXCHANGE_INFO_CACHE_TTL_MS) {
         if (callback) {
             callback(exchangeInfoCache);
         }
         return;
     }
+
+    exchangeInfoCache = null;
+    exchangeInfoCacheTimestamp = 0;
 
     if (callback) {
         exchangeInfoCallbacks.push(callback);
@@ -102,6 +110,7 @@ function fetchExchangeInfo(callback, fallbackCallback, errorCallback) {
                 }
 
                 exchangeInfoCache = response.symbols;
+                exchangeInfoCacheTimestamp = Date.now();
                 flushExchangeInfoSuccess(exchangeInfoCache);
             } catch (error) {
                 console.error("Failed to parse Binance exchange metadata:", error, previewResponseText(xhr.responseText));
@@ -286,8 +295,12 @@ function resolveTickerSymbol(assetSymbol, quoteAsset) {
     return normalizedAssetSymbol + normalizedQuoteAsset;
 }
 
-function requestTickerPrice(symbol, timeoutMs, root, unsupportedPairCallback) {
-    const url = BASE_API_URL + "ticker/price?symbol=" + encodeURIComponent(symbol) + "&symbolStatus=TRADING";
+function requestTickerPrice(symbol, timeoutMs, root, unsupportedPairCallback, attempt) {
+    attempt = attempt || 0;
+    const include24hChange = root.show24hChange === true;
+    const url = include24hChange
+        ? BASE_API_URL + "ticker/24hr?symbol=" + encodeURIComponent(symbol)
+        : BASE_API_URL + "ticker/price?symbol=" + encodeURIComponent(symbol) + "&symbolStatus=TRADING";
     const xhr = new XMLHttpRequest();
 
     root._priceXhr = xhr;
@@ -300,7 +313,8 @@ function requestTickerPrice(symbol, timeoutMs, root, unsupportedPairCallback) {
         if (xhr.status === 200) {
             try {
                 const response = JSON.parse(xhr.responseText);
-                const price = response ? response.price : undefined;
+                const price = response ? (include24hChange ? response.lastPrice : response.price) : undefined;
+                const change24h = include24hChange && response ? response.priceChangePercent : undefined;
 
                 if (price === undefined || price === null || price === "") {
                     root.showError("Invalid Binance price response");
@@ -308,7 +322,7 @@ function requestTickerPrice(symbol, timeoutMs, root, unsupportedPairCallback) {
                     return;
                 }
 
-                root.storePrice(String(price), Date.now());
+                root.storePrice(String(price), Date.now(), change24h);
             } catch (error) {
                 console.error("Failed to parse Binance price response:", error);
                 root.showError("Failed to parse Binance API response");
@@ -322,18 +336,37 @@ function requestTickerPrice(symbol, timeoutMs, root, unsupportedPairCallback) {
             return;
         }
 
+        if (shouldRetryStatus(xhr.status) && attempt < MAX_PRICE_RETRIES) {
+            schedulePriceRetry(root, attempt, parseRetryAfterMs(xhr.getResponseHeader ? xhr.getResponseHeader("Retry-After") : ""), function(nextAttempt) {
+                requestTickerPrice(symbol, timeoutMs, root, unsupportedPairCallback, nextAttempt);
+            });
+            return;
+        }
+
         root.showError("Binance API error: " + xhr.status);
         root.useCachedPrice();
     };
 
     xhr.onerror = () => {
         root._priceXhr = null;
+        if (attempt < MAX_PRICE_RETRIES) {
+            schedulePriceRetry(root, attempt, 0, function(nextAttempt) {
+                requestTickerPrice(symbol, timeoutMs, root, unsupportedPairCallback, nextAttempt);
+            });
+            return;
+        }
         root.showError("Binance network error");
         root.useCachedPrice();
     };
 
     xhr.ontimeout = () => {
         root._priceXhr = null;
+        if (attempt < MAX_PRICE_RETRIES) {
+            schedulePriceRetry(root, attempt, 0, function(nextAttempt) {
+                requestTickerPrice(symbol, timeoutMs, root, unsupportedPairCallback, nextAttempt);
+            });
+            return;
+        }
         root.showError("Binance request timed out");
         root.useCachedPrice();
     };
@@ -356,4 +389,52 @@ function isUnsupportedSymbolResponse(statusCode, responseText) {
 
 function previewResponseText(responseText) {
     return String(responseText || "").slice(0, 160);
+}
+
+function shouldRetryStatus(statusCode) {
+    return statusCode === 429 || statusCode >= 500;
+}
+
+function schedulePriceRetry(root, attempt, retryAfterMs, retryCallback) {
+    var nextAttempt = attempt + 1;
+    var delayMs = getRetryDelayMs(attempt, retryAfterMs);
+    console.log("Retrying Binance price request in " + delayMs + "ms");
+
+    if (!root.jitterTimer || !root.jitterTimer.start) {
+        retryCallback(nextAttempt);
+        return;
+    }
+
+    root._jitterCallback = function() {
+        retryCallback(nextAttempt);
+    };
+    root.jitterTimer.interval = delayMs;
+    root.jitterTimer.start();
+}
+
+function getRetryDelayMs(attempt, retryAfterMs) {
+    if (isFinite(retryAfterMs) && retryAfterMs > 0) {
+        return Math.min(retryAfterMs, 60000);
+    }
+
+    return Math.min(RETRY_BASE_DELAY_MS * Math.pow(2, attempt) + Math.floor(Math.random() * 250), RETRY_MAX_DELAY_MS);
+}
+
+function parseRetryAfterMs(headerValue) {
+    var value = String(headerValue || "").trim();
+    if (value === "") {
+        return 0;
+    }
+
+    var seconds = Number(value);
+    if (isFinite(seconds)) {
+        return Math.max(0, seconds * 1000);
+    }
+
+    var timestamp = Date.parse(value);
+    if (isFinite(timestamp)) {
+        return Math.max(0, timestamp - Date.now());
+    }
+
+    return 0;
 }

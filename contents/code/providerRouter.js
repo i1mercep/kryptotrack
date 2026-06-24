@@ -2,7 +2,8 @@
 .import "coingecko.js" as CoinGecko
 
 function fetchPrice(providerName, coin, coinSymbol, baseCurrency, timeout, apiKey, root) {
-    if (normalizeProviderName(providerName) === "coingecko") {
+    var provider = selectProvider(providerName);
+    if (provider === "coingecko") {
         CoinGecko.fetchPrice(coin, coinSymbol, baseCurrency, timeout, apiKey, root);
         return;
     }
@@ -11,7 +12,8 @@ function fetchPrice(providerName, coin, coinSymbol, baseCurrency, timeout, apiKe
 }
 
 function fetchCoinsList(providerName, callback, errorCallback) {
-    if (normalizeProviderName(providerName) === "coingecko") {
+    var provider = selectProvider(providerName);
+    if (provider === "coingecko") {
         CoinGecko.fetchCoinsList(callback, errorCallback);
         return;
     }
@@ -21,4 +23,16 @@ function fetchCoinsList(providerName, callback, errorCallback) {
 
 function normalizeProviderName(providerName) {
     return String(providerName || "").trim().toLowerCase();
+}
+
+function selectProvider(providerName) {
+    var provider = normalizeProviderName(providerName);
+    if (provider === "binance" || provider === "coingecko") {
+        return provider;
+    }
+
+    if (provider !== "") {
+        console.warn("Unknown API provider '" + providerName + "', falling back to Binance");
+    }
+    return "binance";
 }

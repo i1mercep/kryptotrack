@@ -77,6 +77,10 @@
             <label>Display base currency</label>
             <default>false</default>
         </entry>
+        <entry name="show24hChange" type="Bool">
+            <label>Display 24h change percentage</label>
+            <default>false</default>
+        </entry>
         <entry name="boldText" type="Bool">
             <label>Display bold text</label>
             <default>false</default>
