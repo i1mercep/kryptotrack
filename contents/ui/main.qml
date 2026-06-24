@@ -28,6 +28,7 @@ PlasmoidItem {
     property bool displayBaseCurrency: Plasmoid.configuration.displayBaseCurrency
     property bool boldText: Plasmoid.configuration.boldText
     property bool italicText: Plasmoid.configuration.italicText
+    property bool show24hChange: Plasmoid.configuration.show24hChange
     // API config
     property string apiProvider: Plasmoid.configuration.apiProvider || "binance"
     property string apiKey: Plasmoid.configuration.apiKey || ""
@@ -38,6 +39,8 @@ PlasmoidItem {
     property string errorMessage: ""
     property string statusMessage: ""
     property string cachedPrice
+    property string priceChange24hText: ""
+    property double priceChange24hValue: 0
     property double lastUpdatedTimestamp: 0
     // Internal: used by API providers for request management
     property alias jitterTimer: jitterTimer
@@ -130,12 +133,33 @@ PlasmoidItem {
         }
     }
 
-    function storePrice(price, timestamp) {
+    function formatPriceChange24h(change) {
+        var numericChange = Number(change);
+        if (!isFinite(numericChange)) {
+            return "";
+        }
+
+        var prefix = numericChange > 0 ? "+" : "";
+        return prefix + localizeNumberString(trimTrailingZeros(numericChange.toFixed(2))) + "%";
+    }
+
+    function clearPriceChange24h() {
+        priceChange24hText = "";
+        priceChange24hValue = 0;
+    }
+
+    function storePrice(price, timestamp, change24h) {
         errorMessage = "";
         statusMessage = root._pendingStatusMessage || "";
         root._pendingStatusMessage = "";
         cachedPrice = String(price);
         lastPrice = formatPrice(cachedPrice);
+        if (root.show24hChange) {
+            priceChange24hValue = Number(change24h);
+            priceChange24hText = formatPriceChange24h(change24h);
+        } else {
+            clearPriceChange24h();
+        }
         setLoading(false);
         lastUpdatedTimestamp = timestamp;
         var date = new Date(timestamp);
@@ -170,6 +194,13 @@ PlasmoidItem {
     onSmallPriceSignificantDigitsChanged: refreshFormattedPrice()
     onMinSmallPriceDecimalsChanged: refreshFormattedPrice()
     onMaxSmallPriceDecimalsChanged: refreshFormattedPrice()
+    onShow24hChangeChanged: {
+        if (root.show24hChange) {
+            fetchPrice();
+        } else {
+            clearPriceChange24h();
+        }
+    }
 
     Plasmoid.icon: Qt.resolvedUrl("../images/kryptotrack.svg")
     onCoinChanged: {
@@ -177,6 +208,9 @@ PlasmoidItem {
     }
     onBaseCurrencyChanged: {
         configChangeFetch();
+    }
+    Component.onCompleted: {
+        fetchPrice();
     }
     preferredRepresentation: fullRepresentation
     Plasmoid.backgroundHints: PlasmaCore.Types.ShadowBackground | PlasmaCore.Types.ConfigurableBackground
@@ -188,6 +222,9 @@ PlasmoidItem {
 
         if (root.statusMessage)
             parts.push(root.statusMessage);
+
+        if (root.show24hChange && root.priceChange24hText)
+            parts.push(i18n("24h change: %1", root.priceChange24hText));
 
         return parts.join("\n");
     }
@@ -205,13 +242,22 @@ PlasmoidItem {
         }
     }
 
+    Timer {
+        id: refreshTimer
+
+        interval: Math.max(5000, root.refreshInterval * 1000)
+        running: true
+        repeat: true
+        onTriggered: {
+            console.log("Fetching price for " + root.coin + " vs " + root.baseCurrency);
+            fetchPrice();
+        }
+    }
+
     fullRepresentation: Item {
         id: fullRep
 
-        Layout.minimumWidth: priceLabel.implicitWidth + Plasmoid.configuration.fontSize * 2
-        Component.onCompleted: {
-            fetchPrice();
-        }
+        Layout.minimumWidth: priceRow.implicitWidth + Kirigami.Units.smallSpacing * 2
 
         ColumnLayout {
             id: layout
@@ -220,6 +266,8 @@ PlasmoidItem {
             spacing: Kirigami.Units.smallSpacing
 
             RowLayout {
+                id: priceRow
+
                 spacing: Kirigami.Units.smallSpacing
 
                 PlasmaComponents.BusyIndicator {
@@ -227,15 +275,50 @@ PlasmoidItem {
 
                     visible: root.isLoading
                     running: visible
-                    Layout.preferredWidth: 24
-                    Layout.preferredHeight: 24
+                    Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
+                    Layout.preferredHeight: Kirigami.Units.iconSizes.smallMedium
                 }
 
                 PlasmaComponents.Label {
                     id: priceLabel
 
                     text: root.isLoading ? "" : (root.errorMessage ? root.errorMessage : root.getPriceText())
+                    color: Kirigami.Theme.textColor
                     font.pointSize: root.fontSize
+                    font.bold: root.boldText
+                    font.italic: root.italicText
+                    onTextChanged: {
+                        if (text) {
+                            priceUpdateAnimation.restart();
+                        }
+                    }
+
+                    SequentialAnimation {
+                        id: priceUpdateAnimation
+
+                        NumberAnimation {
+                            target: priceLabel
+                            property: "opacity"
+                            to: 0.6
+                            duration: Kirigami.Units.shortDuration
+                        }
+
+                        NumberAnimation {
+                            target: priceLabel
+                            property: "opacity"
+                            to: 1
+                            duration: Kirigami.Units.shortDuration
+                        }
+                    }
+                }
+
+                PlasmaComponents.Label {
+                    id: change24hLabel
+
+                    visible: root.show24hChange && root.priceChange24hText !== "" && !root.isLoading && !root.errorMessage
+                    text: root.priceChange24hText
+                    color: root.priceChange24hValue > 0 ? Kirigami.Theme.positiveTextColor : (root.priceChange24hValue < 0 ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor)
+                    font.pointSize: Math.max(4, root.fontSize - 1)
                     font.bold: root.boldText
                     font.italic: root.italicText
                 }
@@ -243,19 +326,6 @@ PlasmoidItem {
             }
 
         }
-
-        Timer {
-            id: refreshTimer
-
-            interval: Math.max(5000, root.refreshInterval * 1000)
-            running: true
-            repeat: true
-            onTriggered: {
-                console.log("Fetching price for " + root.coin + " vs " + root.baseCurrency);
-                fetchPrice();
-            }
-        }
-
     }
 
 }

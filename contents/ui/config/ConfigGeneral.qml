@@ -207,7 +207,7 @@ KCM.SimpleKCM {
                     id: filterCoinsField
 
                     placeholderText: String(cfg_apiProvider || "").toLowerCase() === "coingecko" ? i18n("Search CoinGecko coins…") : i18n("Filter coins…")
-                    width: 200
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 10
                     onTextChanged: {
                         updateVisibleCoinsList();
                         var selectedIndex = findSelectedCoinIndex(visibleCoinsList);
@@ -256,7 +256,7 @@ KCM.SimpleKCM {
                     id: filterCurrField
 
                     placeholderText: i18n("Filter currencies…")
-                    width: 200
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 10
                     onTextChanged: {
                         var query = text.toLowerCase();
                         if (query.length < 2) {

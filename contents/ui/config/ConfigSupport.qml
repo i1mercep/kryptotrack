@@ -118,8 +118,8 @@ KCM.SimpleKCM {
                         id: qrDialog
 
                         modal: true
-                        width: 300
-                        height: 300
+                        width: Kirigami.Units.gridUnit * 16
+                        height: Kirigami.Units.gridUnit * 16
                         standardButtons: Dialog.Close
 
                         Image {
