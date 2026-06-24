@@ -1,5 +1,5 @@
-import "../code/providerRouter.js" as ProviderRouter
 import "../code/cryptoSymbols.js" as CryptoSymbols
+import "../code/providerRouter.js" as ProviderRouter
 import QtQuick
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
@@ -80,9 +80,8 @@ PlasmoidItem {
 
     function formatPrice(price) {
         var numericPrice = Number(price);
-        if (!isFinite(numericPrice)) {
+        if (!isFinite(numericPrice))
             return String(price);
-        }
 
         var absolutePrice = Math.abs(numericPrice);
         var decimals = standardPriceDecimals;
@@ -93,7 +92,6 @@ PlasmoidItem {
         var normalizedMinSmallDecimals = Math.max(0, minSmallPriceDecimals);
         var normalizedMaxSmallDecimals = Math.max(normalizedMinSmallDecimals, maxSmallPriceDecimals);
         var normalizedSmallPriceSignificantDigits = Math.max(1, smallPriceSignificantDigits);
-
         if (absolutePrice >= normalizedLargeThreshold) {
             decimals = normalizedLargeDecimals;
         } else if (absolutePrice >= normalizedStandardThreshold) {
@@ -102,7 +100,6 @@ PlasmoidItem {
             var leadingZeros = Math.floor(-Math.log(absolutePrice) / Math.LN10);
             decimals = Math.min(normalizedMaxSmallDecimals, Math.max(normalizedMinSmallDecimals, leadingZeros + normalizedSmallPriceSignificantDigits));
         }
-
         return localizeNumberString(trimTrailingZeros(numericPrice.toFixed(decimals)));
     }
 
@@ -115,29 +112,25 @@ PlasmoidItem {
         var parts = stringValue.split(".");
         var locale = Qt.locale();
         var localizedIntegerPart = parts[0];
-
-        if (useThousandsSeparators) {
+        if (useThousandsSeparators)
             localizedIntegerPart = Number(parts[0]).toLocaleString(locale, "f", 0);
-        }
 
-        if (parts.length < 2) {
+        if (parts.length < 2)
             return localizedIntegerPart;
-        }
 
         return localizedIntegerPart + locale.decimalPoint + parts[1];
     }
 
     function refreshFormattedPrice() {
-        if (cachedPrice) {
+        if (cachedPrice)
             lastPrice = formatPrice(cachedPrice);
-        }
+
     }
 
     function formatPriceChange24h(change) {
         var numericChange = Number(change);
-        if (!isFinite(numericChange)) {
+        if (!isFinite(numericChange))
             return "";
-        }
 
         var prefix = numericChange > 0 ? "+" : "";
         return prefix + localizeNumberString(trimTrailingZeros(numericChange.toFixed(2))) + "%";
@@ -195,13 +188,11 @@ PlasmoidItem {
     onMinSmallPriceDecimalsChanged: refreshFormattedPrice()
     onMaxSmallPriceDecimalsChanged: refreshFormattedPrice()
     onShow24hChangeChanged: {
-        if (root.show24hChange) {
+        if (root.show24hChange)
             fetchPrice();
-        } else {
+        else
             clearPriceChange24h();
-        }
     }
-
     Plasmoid.icon: Qt.resolvedUrl("../images/kryptotrack.svg")
     onCoinChanged: {
         configChangeFetch();
@@ -288,9 +279,9 @@ PlasmoidItem {
                     font.bold: root.boldText
                     font.italic: root.italicText
                     onTextChanged: {
-                        if (text) {
+                        if (text)
                             priceUpdateAnimation.restart();
-                        }
+
                     }
 
                     SequentialAnimation {
@@ -309,7 +300,9 @@ PlasmoidItem {
                             to: 1
                             duration: Kirigami.Units.shortDuration
                         }
+
                     }
+
                 }
 
                 PlasmaComponents.Label {
@@ -326,6 +319,7 @@ PlasmoidItem {
             }
 
         }
+
     }
 
 }

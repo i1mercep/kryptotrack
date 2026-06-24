@@ -47,7 +47,7 @@ KCM.SimpleKCM {
 
             Kirigami.FormData.label: i18n("Large price threshold")
             from: 0
-            to: 1000000
+            to: 1e+06
             stepSize: 1
         }
 
@@ -65,7 +65,7 @@ KCM.SimpleKCM {
 
             Kirigami.FormData.label: i18n("Standard price threshold")
             from: 0
-            to: 1000000
+            to: 1e+06
             stepSize: 1
         }
 
