@@ -278,10 +278,9 @@ PlasmoidItem {
                     font.pointSize: root.fontSize
                     font.bold: root.boldText
                     font.italic: root.italicText
-                    onTextChanged: {
-                        if (text)
+                    onTextChanged: function(newText) {
+                        if (newText)
                             priceUpdateAnimation.restart();
-
                     }
 
                     SequentialAnimation {
