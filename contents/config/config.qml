@@ -3,27 +3,26 @@ import org.kde.plasma.configuration
 
 ConfigModel {
     ConfigCategory {
-        name: i18n("General")
         icon: "configure"
+        name: i18n("General")
         source: "config/ConfigGeneral.qml"
     }
 
     ConfigCategory {
-        name: i18n("API")
         icon: "cloudstatus"
+        name: i18n("API")
         source: "config/ConfigApi.qml"
     }
 
     ConfigCategory {
-        name: i18n("Appearance")
         icon: "oilpaint"
+        name: i18n("Appearance")
         source: "config/ConfigAppearance.qml"
     }
 
     ConfigCategory {
-        name: i18n("Support")
         icon: "donate"
+        name: i18n("Support")
         source: "config/ConfigSupport.qml"
     }
-
 }

@@ -6,8 +6,8 @@
 - Keep implementations lightweight, readable, and consistent with existing Plasma/QML patterns.
 
 ## Architecture Guidelines
-- Prefer keeping business/data logic in `contents/code/*.js` and UI/state wiring in QML.
-- Reuse existing modules (e.g. `coingecko.js`, `cachedCoins.js`, `cryptoSymbols.js`) before adding new files.
+- Prefer keeping business/data logic in `contents/code/*.mjs` and UI/state wiring in QML.
+- Reuse existing modules (e.g. `coingecko.mjs`, `cachedCoins.mjs`, `cryptoSymbols.mjs`) before adding new files.
 - For settings:
 	- Add schema entries in `contents/config/main.xml`.
 	- Add/edit controls in `contents/config/config.qml` and related `contents/ui/config/*.qml` pages.
@@ -37,6 +37,9 @@
 - Keep backward compatibility for user configuration whenever possible.
 
 ## Validation Checklist (before finishing)
+- Run `just check` on Qt 6.12+/Plasma 6.8+; `bun run check` is the portable CI subset.
+- Keep XHR `send()` in the owning QML context and use scheduler deadlines.
+- Verify JavaScript syntax in the Qt engine, not only Bun/TypeScript.
 - Confirm modified QML files remain valid and imports are correct.
 - Confirm changed setting keys exist in both XML schema and config UI.
 - Sanity-check that main widget UI still loads and default state behaves safely.

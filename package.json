@@ -1,0 +1,15 @@
+{
+    "name": "kryptotrack",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "typecheck": "tsc --noEmit",
+        "test": "bun test tests/*.test.mjs",
+        "lint": "prettier --check 'contents/code/*.mjs' 'tests/*.mjs' 'scripts/*.mjs' package.json tsconfig.json",
+        "check": "bun run typecheck && bun run lint && bun run test && bun scripts/check-package.mjs"
+    },
+    "devDependencies": {
+        "prettier": "3.10.1",
+        "typescript": "7.0.2"
+    }
+}

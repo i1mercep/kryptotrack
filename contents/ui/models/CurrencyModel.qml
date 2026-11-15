@@ -2,177 +2,176 @@ import QtQuick
 
 ListModel {
     ListElement {
-        name: "bitcoin"
         abbreviation: "btc"
+        name: "bitcoin"
         symbol: "₿"
     }
 
     ListElement {
-        name: "ethereum"
         abbreviation: "eth"
+        name: "ethereum"
         symbol: "Ξ"
     }
 
     ListElement {
-        name: "solana"
         abbreviation: "sol"
+        name: "solana"
         symbol: "◎"
     }
 
     ListElement {
-        name: "Tether USD"
         abbreviation: "usdt"
+        name: "Tether USD"
         symbol: "₮"
     }
 
     ListElement {
-        name: "US Dollar"
         abbreviation: "usd"
+        name: "US Dollar"
         symbol: "$"
     }
 
     ListElement {
-        name: "Euro"
         abbreviation: "eur"
+        name: "Euro"
         symbol: "€"
     }
 
     ListElement {
-        name: "Japanese Yen"
         abbreviation: "jpy"
+        name: "Japanese Yen"
         symbol: "¥"
     }
 
     ListElement {
-        name: "British Pound"
         abbreviation: "gbp"
+        name: "British Pound"
         symbol: "£"
     }
 
     ListElement {
-        name: "Australian Dollar"
         abbreviation: "aud"
+        name: "Australian Dollar"
         symbol: "$"
     }
 
     ListElement {
-        name: "Canadian Dollar"
         abbreviation: "cad"
+        name: "Canadian Dollar"
         symbol: "$"
     }
 
     ListElement {
-        name: "Swiss Franc"
         abbreviation: "chf"
+        name: "Swiss Franc"
         symbol: "CHF"
     }
 
     ListElement {
-        name: "Chinese Yuan"
         abbreviation: "cny"
+        name: "Chinese Yuan"
         symbol: "¥"
     }
 
     ListElement {
-        name: "Hong Kong Dollar"
         abbreviation: "hkd"
+        name: "Hong Kong Dollar"
         symbol: "$"
     }
 
     ListElement {
-        name: "New Zealand Dollar"
         abbreviation: "nzd"
+        name: "New Zealand Dollar"
         symbol: "$"
     }
 
     ListElement {
-        name: "Swedish Krona"
         abbreviation: "sek"
+        name: "Swedish Krona"
         symbol: "kr"
     }
 
     ListElement {
-        name: "Norwegian Krone"
         abbreviation: "nok"
+        name: "Norwegian Krone"
         symbol: "kr"
     }
 
     ListElement {
-        name: "South Korean Won"
         abbreviation: "krw"
+        name: "South Korean Won"
         symbol: "₩"
     }
 
     ListElement {
-        name: "Indian Rupee"
         abbreviation: "inr"
+        name: "Indian Rupee"
         symbol: "₹"
     }
 
     ListElement {
-        name: "Russian Ruble"
         abbreviation: "rub"
+        name: "Russian Ruble"
         symbol: "₽"
     }
 
     ListElement {
-        name: "Brazilian Real"
         abbreviation: "brl"
+        name: "Brazilian Real"
         symbol: "R$"
     }
 
     ListElement {
-        name: "South African Rand"
         abbreviation: "zar"
+        name: "South African Rand"
         symbol: "R"
     }
 
     ListElement {
-        name: "Mexican Peso"
         abbreviation: "mxn"
+        name: "Mexican Peso"
         symbol: "$"
     }
 
     ListElement {
-        name: "Singapore Dollar"
         abbreviation: "sgd"
+        name: "Singapore Dollar"
         symbol: "$"
     }
 
     ListElement {
-        name: "Turkish Lira"
         abbreviation: "try"
+        name: "Turkish Lira"
         symbol: "₺"
     }
 
     ListElement {
-        name: "Thai Baht"
         abbreviation: "thb"
+        name: "Thai Baht"
         symbol: "฿"
     }
 
     ListElement {
-        name: "Argentine Peso"
         abbreviation: "ars"
+        name: "Argentine Peso"
         symbol: "$"
     }
 
     ListElement {
-        name: "Chilean Peso"
         abbreviation: "clp"
+        name: "Chilean Peso"
         symbol: "$"
     }
 
     ListElement {
-        name: "Venezuelan Bolívar"
         abbreviation: "vef"
+        name: "Venezuelan Bolívar"
         symbol: "Bs."
     }
 
     ListElement {
-        name: "Salvadoran Colón"
         abbreviation: "svc"
+        name: "Salvadoran Colón"
         symbol: "₡"
     }
-
 }

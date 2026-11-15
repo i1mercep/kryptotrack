@@ -1,8 +1,4 @@
-function getCoins() {
-    return coinsData;
-}
-
-var coinsData = [
+const coinsData = [
     {
         "id": "bitcoin",
         "symbol": "btc",
@@ -85904,3 +85900,6 @@ var coinsData = [
         "name": "Z•Z•Z•Z•Z•FEHU•Z•Z•Z•Z•Z"
     }
 ]
+export function getCoins() {
+    return coinsData;
+}

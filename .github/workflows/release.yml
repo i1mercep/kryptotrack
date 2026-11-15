@@ -10,7 +10,11 @@ permissions:
   contents: write
 
 jobs:
+  checks:
+    uses: ./.github/workflows/check.yml
+
   bump:
+    needs: checks
     name: "Bump version"
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
@@ -20,26 +24,27 @@ jobs:
       changelog: ${{ steps.tag_version.outputs.changelog }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Bump version and push tag
         id: tag_version
-        uses: mathieudutour/github-tag-action@v6.2
+        uses: mathieudutour/github-tag-action@v7
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
 
   release:
     name: "Package & Release"
-    needs: bump
+    needs: [checks, bump]
     if: |
       always() &&
+      needs.checks.result == 'success' &&
       (github.event_name == 'release' ||
        (github.event_name == 'push' && needs.bump.result == 'success' && needs.bump.outputs.new_tag != ''))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
 
@@ -62,7 +67,7 @@ jobs:
 
       - name: Install just and zip
         run: |
-          sudo apt-get update -qq && sudo apt-get install -yqq zip jq
+          sudo apt-get update -qq && sudo apt-get install -yqq zip jq ripgrep
           curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | sudo bash -s -- --to /usr/local/bin
 
       - name: Stamp version in metadata

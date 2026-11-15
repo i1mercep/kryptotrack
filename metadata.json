@@ -3,19 +3,19 @@
         "Id": "com.github.i1mercep.kryptotrack",
         "Name": "Kryptotrack",
         "Description": "Lightweight Plasma 6 applet for tracking cryptocurrency prices.",
-        "Icon": "applications-internet-symbolic",
+        "Icon": "view-financial-account",
         "Website": "https://github.com/i1mercep/kryptotrack",
         "BugReportUrl": "https://github.com/i1mercep/kryptotrack/issues",
         "Category": "Online Services",
         "License": "GPL-3.0-or-later",
         "Authors": [
             {
-                "Name": "Ivan Merčep",
+                "Name": "Ivan Mer\u010dep",
                 "Email": "i1mercep@gmail.com"
             }
         ],
         "Version": "1.2.3"
     },
     "KPackageStructure": "Plasma/Applet",
-    "X-Plasma-API-Minimum-Version": "6.0"
+    "X-Plasma-API-Minimum-Version": "6.8"
 }

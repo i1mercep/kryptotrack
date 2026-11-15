@@ -1,36 +1,52 @@
-name     := "kryptotrack"
-plugin   := "com.github.i1mercep." + name
-package  := name + ".plasmoid"
-install_dir := "~/.local/share/plasma/plasmoids/" + plugin
+name := "kryptotrack"
+plugin := "com.github.i1mercep." + name
+package := name + ".plasmoid"
 
-# Build the plasmoid package (default)
+# Build a directly installable package containing runtime files only.
 [group('build')]
 build: clean
-    zip -r {{package}} contents metadata.json
+    rg --files contents -g '*.qml' -g '*.mjs' -g '*.svg' -g '*.xml' | LC_ALL=C sort | zip -X {{package}} metadata.json -@
 
-# Run the widget in plasmoidviewer
 [group('dev')]
 run:
     plasmoidviewer -a .
 
-# Build and install (or upgrade) the plasmoid
+# Installing does not interrupt the current desktop session.
 [group('build')]
 install: build
     kpackagetool6 -t Plasma/Applet -i {{package}} || kpackagetool6 -t Plasma/Applet -u {{package}}
+
+[group('dev')]
+restart-plasma:
     plasmashell --replace > /dev/null 2>&1 &
 
-# Uninstall and clean
 [group('build')]
 uninstall: clean
-    kpackagetool6 -t Plasma/Applet -r {{plugin}} || rm -rf {{install_dir}}
+    kpackagetool6 -t Plasma/Applet -r {{plugin}}
 
-# Format all QML and JS files in-place
+[group('dev')]
+lint:
+    bun run lint
+    bun scripts/lint-qml.mjs
+
+[group('dev')]
+typecheck:
+    bun run typecheck
+
+[group('dev')]
+test:
+    bun run test
+    bun scripts/test-qml.mjs
+
+[group('dev')]
+check: lint typecheck test build
+    bun scripts/check-package.mjs {{package}}
+
 [group('dev')]
 format:
-    find contents -name "*.qml" | xargs qmlformat -i
-    find contents -name "*.js" | xargs prettier --write
+    bun scripts/format-qml.mjs
+    bunx --no-install prettier --write 'contents/code/*.mjs' 'tests/*.mjs' 'scripts/*.mjs' package.json tsconfig.json
 
-# Remove build artifacts
 [group('build')]
 clean:
     rm -f {{package}}

@@ -20,6 +20,8 @@
         <entry name="refreshInterval" type="Int">
             <label>Refresh interval in seconds</label>
             <default>60</default>
+            <min>5</min>
+            <max>1000</max>
         </entry>
     </group>
     <group name="API">
@@ -34,12 +36,16 @@
         <entry name="timeout" type="Int">
             <label>Timeout in seconds</label>
             <default>5</default>
+            <min>5</min>
+            <max>60</max>
         </entry>
     </group>
     <group name="Appearance">
         <entry name="fontSize" type="Int">
             <label>Font size</label>
             <default>9</default>
+            <min>4</min>
+            <max>72</max>
         </entry>
         <entry name="useThousandsSeparators" type="Bool">
             <label>Use locale-specific thousands separators</label>
@@ -48,30 +54,44 @@
         <entry name="largePriceThreshold" type="Int">
             <label>Threshold for large-price formatting</label>
             <default>1000</default>
+            <min>0</min>
+            <max>1000000</max>
         </entry>
         <entry name="largePriceDecimals" type="Int">
             <label>Decimals used at or above the large-price threshold</label>
             <default>0</default>
+            <min>0</min>
+            <max>12</max>
         </entry>
         <entry name="standardPriceThreshold" type="Int">
             <label>Threshold for standard-price formatting</label>
             <default>1</default>
+            <min>0</min>
+            <max>1000000</max>
         </entry>
         <entry name="standardPriceDecimals" type="Int">
             <label>Decimals used at or above the standard-price threshold</label>
             <default>2</default>
+            <min>0</min>
+            <max>12</max>
         </entry>
         <entry name="smallPriceSignificantDigits" type="Int">
             <label>Extra meaningful digits to keep for small prices</label>
             <default>3</default>
+            <min>1</min>
+            <max>12</max>
         </entry>
         <entry name="minSmallPriceDecimals" type="Int">
             <label>Minimum decimals for small prices</label>
             <default>2</default>
+            <min>0</min>
+            <max>12</max>
         </entry>
         <entry name="maxSmallPriceDecimals" type="Int">
             <label>Maximum decimals for small prices</label>
             <default>8</default>
+            <min>0</min>
+            <max>12</max>
         </entry>
         <entry name="displayBaseCurrency" type="Bool">
             <label>Display base currency</label>
